@@ -271,6 +271,10 @@ public class CreateMojo
                     else if ( s.startsWith( "scmVersion" ) )
                     {
                         useScm = true;
+                        if ( doScmChecks() ) 
+                        {
+                            return;
+                        }    
                         itemAry[i] = getRevision();
                     }
                     else if ( s.startsWith( "buildNumber" ) )
@@ -351,49 +355,8 @@ public class CreateMojo
         }
         else
         {
-            // Check if the plugin has already run.
-            revision = project.getProperties().getProperty( this.buildNumberPropertyName );
-            if ( this.getRevisionOnlyOnce && revision != null )
-            {
-                getLog().debug( "Revision available from previous execution" );
-                return;
-            }
-
-            if ( doCheck )
-            {
-                // we fail if there are local mods
-                checkForLocalModifications();
-            }
-            else
-            {
-                getLog().debug( "Checking for local modifications: skipped." );
-            }
-            if ( session.getSettings().isOffline() )
-            {
-                getLog().info( "maven is executed in offline mode, Updating project files from SCM: skipped." );
-            }
-            else
-            {
-                if ( doUpdate )
-                {
-                    // we update your local repo
-                    // even after you commit, your revision stays the same until you update, thus this
-                    // action
-                    List<ScmFile> changedFiles = update();
-                    for ( ScmFile file : changedFiles )
-                    {
-                        getLog().debug( "Updated: " + file );
-                    }
-                    if ( changedFiles.size() == 0 )
-                    {
-                        getLog().debug( "No files needed updating." );
-                    }
-                }
-                else
-                {
-                    getLog().debug( "Updating project files from SCM: skipped." );
-                }
-            }
+            if ( doScmChecks() )
+            return;
             revision = getRevision();
         }
 
@@ -433,6 +396,53 @@ public class CreateMojo
                 }
             }
         }
+    }
+
+    private boolean doScmChecks() throws MojoExecutionException
+    {
+        // Check if the plugin has already run.
+        revision = project.getProperties().getProperty( this.buildNumberPropertyName );
+        if ( this.getRevisionOnlyOnce && revision != null )
+        {
+            getLog().debug( "Revision available from previous execution" );
+            return true;
+        }
+        if ( doCheck )
+        {
+            // we fail if there are local mods
+            checkForLocalModifications();
+        }
+        else
+        {
+            getLog().debug( "Checking for local modifications: skipped." );
+        }
+        if ( session.getSettings().isOffline() )
+        {
+            getLog().info( "maven is executed in offline mode, Updating project files from SCM: skipped." );
+        }
+        else
+        {
+            if ( doUpdate )
+            {
+                // we update your local repo
+                // even after you commit, your revision stays the same until you update, thus this
+                // action
+                List<ScmFile> changedFiles = update();
+                for ( ScmFile file : changedFiles )
+                {
+                    getLog().debug( "Updated: " + file );
+                }
+                if ( changedFiles.size() == 0 )
+                {
+                    getLog().debug( "No files needed updating." );
+                }
+            }
+            else
+            {
+                getLog().debug( "Updating project files from SCM: skipped." );
+            }
+        }
+        return false;
     }
 
     /**
